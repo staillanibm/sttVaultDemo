@@ -11,6 +11,7 @@ services:
 
   msr-vault-demo:
     image: ghcr.io/staillanibm/msr-vault-demo:${TAG:-latest}
+    platform: linux/amd64
     container_name: msr-vault-demo
     ports:
       - "15555:5555"
@@ -20,6 +21,9 @@ services:
       - ${TLS_CERT_PATH}:/tmp/fullchain.pem:ro
     env_file:
       - .env
+    depends_on:
+      vault-bootstrap:
+        condition: service_completed_successfully
     healthcheck:
       interval: 5s
       retries: 24
@@ -27,6 +31,7 @@ services:
 
   vault:
     image: hashicorp/vault:1.20
+    platform: linux/amd64 
     container_name: vault
     user: "100:100"
     entrypoint: ["/bin/sh","-lc","exec vault server -config=/vault/config.hcl"]
@@ -36,7 +41,7 @@ services:
     cap_add:
       - IPC_LOCK
     environment:
-      - VAULT_ADDR=http://0.0.0.0:8200
+      - VAULT_ADDR=https://0.0.0.0:8200
     volumes:
       - ./vault/config.hcl:/vault/config.hcl:ro  
       - ./vault/bootstrap:/bootstrap:ro  
@@ -48,20 +53,37 @@ services:
       default:
         aliases:
           - vault.sttlab.local  
+    healthcheck:
+      interval: 3s
+      retries: 60
+      test:
+        [
+          "CMD-SHELL",
+          "vault status -address=https://127.0.0.1:8200 -tls-skip-verify >/dev/null 2>&1; ec=$$?; [ $$ec -le 3 ]"
+        ]
 
 
-  # vault-agent:
-  #   image: hashicorp/vault:1.20
-  #   container_name: vault-agent
-  #   command: ["vault","agent","-config=/vault/config/agent.hcl","-log-level=info"]
-  #   cap_add:
-  #     - IPC_LOCK
-  #   volumes:
-  #     - ./vault/agent.hcl:/vault/config/agent.hcl:ro
-  #     - ./vault/out/role_id:/tmp/vault/role_id:ro
-  #     - ./vault/out/secret_id:/tmp/vault/secret_id
-  #     - vault-token:/tmp/vault-token                                
-  #   restart: unless-stopped
+  vault-bootstrap:
+    image: willhallonline/ansible:latest   
+    container_name: vault-bootstrap
+    depends_on:
+      vault:
+        condition: service_healthy
+    working_dir: /ansible
+    environment:
+      VAULT_ADDR: https://vault.sttlab.local:8200
+      VAULT_KV_MOUNT: secret
+      VAULT_KV_PATH: msr
+      VAULT_TRANSIT_KEY: msr-key
+      ANSIBLE_FORCE_COLOR: "1"
+    volumes:
+      - ./ansible:/ansible:ro              
+      - ./vault/bootstrap:/bootstrap:ro    
+      - ./vault/out:/out                   
+    command: >
+      ansible-playbook -i inventory playbook.yml -vvv
+    restart: "no"
+
 
 volumes:
   vault-data:
