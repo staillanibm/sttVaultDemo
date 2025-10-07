@@ -1,0 +1,61 @@
+services:
+
+  init-perms:
+    image: busybox
+    user: "0:0"
+    volumes:
+      - vault-data:/vault-data
+      - vault-token:/vault-token
+    command: sh -c "chown -R 1000:1000 /vault-data /vault-token"
+    restart: "no"
+
+  msr-vault-demo:
+    image: ghcr.io/staillanibm/msr-vault-demo:${TAG:-latest}
+    container_name: msr-vault-demo
+    ports:
+      - "15555:5555"
+    volumes:
+      - ./application.properties.vault:/opt/softwareag/IntegrationServer/application.properties
+      - ./vault/out/client_token:/tmp/client_token
+    env_file:
+      - .env
+    healthcheck:
+      interval: 5s
+      retries: 24
+      test: ["CMD-SHELL", "curl -o /dev/null -s -w '%{http_code}' http://localhost:5555 | grep -qE '^(200|3[0-9]{2})$'"]
+
+  vault:
+    image: hashicorp/vault:1.20
+    container_name: vault
+    user: "100:100"
+    entrypoint: ["/bin/sh","-lc","exec vault server -config=/vault/config.hcl"]
+    command: [] 
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      - VAULT_ADDR=http://0.0.0.0:8200
+    volumes:
+      - ./vault/config.hcl:/vault/config.hcl:ro  
+      - ./vault/bootstrap:/bootstrap:ro  
+      - vault-data:/vault/data
+    restart: unless-stopped
+
+
+  # vault-agent:
+  #   image: hashicorp/vault:1.20
+  #   container_name: vault-agent
+  #   command: ["vault","agent","-config=/vault/config/agent.hcl","-log-level=info"]
+  #   cap_add:
+  #     - IPC_LOCK
+  #   volumes:
+  #     - ./vault/agent.hcl:/vault/config/agent.hcl:ro
+  #     - ./vault/out/role_id:/tmp/vault/role_id:ro
+  #     - ./vault/out/secret_id:/tmp/vault/secret_id
+  #     - vault-token:/tmp/vault-token                                
+  #   restart: unless-stopped
+
+volumes:
+  vault-data:
+  vault-token:

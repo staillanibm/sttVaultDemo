@@ -1,1 +1,9 @@
 *.bak
+.env
+role_id
+secret_id
+root_token
+unseal_key
+client_token
+init.json
+secrets.json
