@@ -4,10 +4,11 @@ disable_mlock = true
 storage "file" { path = "/vault/data" }
 
 listener "tcp" {
-  address         = "0.0.0.0:8200"
-  cluster_address = "0.0.0.0:8201"
-  tls_disable     = 1
+  address                   = "0.0.0.0:8200"
+  tls_disable               = false
+  tls_cert_file             = "/vault/tls/fullchain.pem"   
+  tls_key_file              = "/vault/tls/privkey.pem"
+  tls_disable_client_certs  = true                         
 }
 
-api_addr     = "http://vault:8200"
-cluster_addr = "http://vault:8201"
+api_addr     = "https://vault.sttlab.local:8200"

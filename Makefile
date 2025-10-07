@@ -1,5 +1,5 @@
 DC=docker compose -f ./resources/compose/docker-compose.yml
-VAULT_ADDR=http://127.0.0.1:8200
+VAULT_ADDR=https://vault.sttlab.local:8200
 VAULT_BOOTSTRAP_DIR=./resources/compose/vault/bootstrap
 VAULT_OUT_DIR=./resources/compose/vault/out
 VAULT_INIT_JSON=$(VAULT_OUT_DIR)/init.json
@@ -28,7 +28,7 @@ vault-up:
 	until curl -s -o /dev/null -w "%{http_code}" $(VAULT_ADDR)/v1/sys/health | grep -Eq "^(200|429|501|503)$$"; do sleep 1; done
 
 vault-chown:
-	docker run --rm -u 0 -v compose_vault-data:/v alpine sh -lc 'chown -R 100:100 /v'
+	$(DC) up -d init-perms
 
 vault-init: 
 	mkdir -p $(VAULT_OUT_DIR)
@@ -99,7 +99,7 @@ vault-get-token:
 
 
 vault-load-secrets:
-	@echo "→ Uploading $(VAULT_JSON_FILE) to $(VAULT_KV_MOUNT)/$(VAULT_KV_PATH)"
+	@echo "Uploading $(VAULT_JSON_FILE) to $(VAULT_KV_MOUNT)/$(VAULT_KV_PATH)"
 	@curl -sS -k \
 	  -H "X-Vault-Token: $$(cat $(VAULT_ROOT_TOKEN))" \
 	  -H "Content-Type: application/json" \

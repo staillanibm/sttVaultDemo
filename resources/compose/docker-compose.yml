@@ -6,7 +6,7 @@ services:
     volumes:
       - vault-data:/vault-data
       - vault-token:/vault-token
-    command: sh -c "chown -R 1000:1000 /vault-data /vault-token"
+    command: sh -c "chown -R 100:100 /vault-data /vault-token"
     restart: "no"
 
   msr-vault-demo:
@@ -17,6 +17,7 @@ services:
     volumes:
       - ./application.properties.vault:/opt/softwareag/IntegrationServer/application.properties
       - ./vault/out/client_token:/tmp/client_token
+      - ${TLS_CERT_PATH}:/tmp/fullchain.pem:ro
     env_file:
       - .env
     healthcheck:
@@ -40,7 +41,13 @@ services:
       - ./vault/config.hcl:/vault/config.hcl:ro  
       - ./vault/bootstrap:/bootstrap:ro  
       - vault-data:/vault/data
+      - ${TLS_CERT_PATH}:/vault/tls/fullchain.pem:ro
+      - ${TLS_KEY_PATH}:/vault/tls/privkey.pem:ro
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - vault.sttlab.local  
 
 
   # vault-agent:

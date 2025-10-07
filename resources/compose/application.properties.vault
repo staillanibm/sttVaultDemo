@@ -20,6 +20,6 @@ vault.hashiCorpVault.secretsCache.maxEntries=1000
 vault.hashiCorpVault.secretsCache.ttlSeconds=300
 vault.hashiCorpVault.properties.SECRET_MOUNT_PATH=msr
 vault.hashiCorpVault.properties.ENCRYPTION_KEY=msr-key
-vault.hashiCorpVault.properties.VAULT_ADDR=http://vault:8200
+vault.hashiCorpVault.properties.VAULT_ADDR=https://vault.sttlab.local:8200
 vault.hashiCorpVault.properties.VAULT_TOKEN=$file{/tmp/client_token}
-
+vault.hashiCorpVault.properties.TLS_CERT_FILE=$file{/tmp/fullchain.pem}
